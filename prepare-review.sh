@@ -5,7 +5,7 @@ USAGE="$0 source-branch dest-branch"
 if [ $# == 1 -a \( x$1 == "x--help" -o x$1 == "x-h" \) ]
 then
     echo $USAGE
-    exit
+    exit 0
 fi
 
 if [ $# != 2 ]

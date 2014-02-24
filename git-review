@@ -1,0 +1,97 @@
+#!/bin/sh -ex
+
+show_help() {
+    echo "Usage: git review prepare"
+    echo "                  list"
+    echo "                  select"
+    echo
+    echo "Prepare"
+    echo "======="
+    echo "Use \`git review prepare SRC_BRANCH DEST_BRANCH\` to initiate"
+    echo "review or when SRC_BRANCH is updated."
+    echo
+    echo "Running this command causes switching to the prepared codereview"
+    echo "(see help for `select` section)."
+}
+
+#
+# Parses output of `git config`, prints help if needed.
+# Returns an empty string if repo is not configured, else path to tmp_dir.
+#
+get_review_cache_dir() {
+    GIT_CONFIG_REVIEW_CACHE_DIR_PROPERTY=reviews.cache-dir
+    result=`git config --local --get ${GIT_CONFIG_REVIEW_CACHE_DIR_PROPERTY} 2>/dev/null || echo`
+    if [ -z $result ]
+    then
+        echo "Path to cache dir for current repository is not specified." >&2
+        echo "Please, set it up at first:" >&2
+        echo "    git config --local --path --add ${GIT_CONFIG_REVIEW_CACHE_DIR_PROPERTY} YOUR_PATH" >&2
+    fi
+    echo $result
+}
+
+GIT_CONFIG_SELECTED_PATCH_PROPERTY=reviews.selected-patch
+
+reviews_cache_dir=`get_review_cache_dir`
+if [ -z $reviews_cache_dir ]
+then
+    exit 1
+fi
+
+COMMAND=$1
+
+case $COMMAND in
+  prepare) 
+    SOURCE_BRANCH_NAME=$2
+    DEST_BRANCH_NAME=$3
+    REVIEW_DIRNAME=${reviews_cache_dir}/$(echo $SOURCE_BRANCH_NAME | tr / -)
+    # in case when origin is not specified
+    git fetch || true
+    COMMON_COMMIT=$(git merge-base $SOURCE_BRANCH_NAME $DEST_BRANCH_NAME)
+    CHANGED_FILES=$(git diff ${COMMON_COMMIT}..${SOURCE_BRANCH_NAME} --name-only)
+    if [ ! -d ${REVIEW_DIRNAME}/orig ]
+    then
+        mkdir -p ${REVIEW_DIRNAME}/orig
+        for file in $CHANGED_FILES
+        do
+            git show $COMMON_COMMIT:$file > ${REVIEW_DIRNAME}/orig/`basename $file`
+        done
+    fi
+    LATEST_COMMIT_DATE=$(git log -n1 --format=format:%ai $SOURCE_BRANCH_NAME)
+    if [ ! -d "${REVIEW_DIRNAME}/${LATEST_COMMIT_DATE}" ]
+    then
+        CURRENT_FOLDER="${REVIEW_DIRNAME}/${LATEST_COMMIT_DATE}"
+        mkdir "$CURRENT_FOLDER"
+        LATEST_DIR="${REVIEW_DIRNAME}/latest"
+        rm -f "$LATEST_DIR"
+        ln -s "${CURRENT_FOLDER}" "${LATEST_DIR}"
+        for file in $CHANGED_FILES
+        do
+            git show "$SOURCE_BRANCH_NAME:$file" > "$CURRENT_FOLDER/`basename $file`"
+        done
+    fi
+
+    # And select it
+    git config --local --unset $GIT_CONFIG_SELECTED_PATCH_PROPERTY || true
+    git config --local --path --add $GIT_CONFIG_SELECTED_PATCH_PROPERTY "$REVIEW_DIRNAME"
+    ;;
+  cf)
+    # changed files
+    # get-select
+    REVIEW_DIRNAME=`git config --local --get $GIT_CONFIG_SELECTED_PATCH_PROPERTY`
+    cd $REVIEW_DIRNAME
+    diff -rq orig latest
+    cd -
+    ;;
+  sr)
+    # start review
+    filename=$2
+    REVIEW_DIRNAME=`git config --local --get $GIT_CONFIG_SELECTED_PATCH_PROPERTY`
+    cd $REVIEW_DIRNAME
+    vimdiff orig/$filename latest/$filename
+    cd -
+    ;;
+  *)
+    show_help
+    ;;
+esac

@@ -1,4 +1,4 @@
-#!/bin/sh -ex
+#!/bin/sh -e
 
 show_help() {
     echo "Usage: git review prepare"
@@ -54,7 +54,8 @@ case $COMMAND in
         mkdir -p ${REVIEW_DIRNAME}/orig
         for file in $CHANGED_FILES
         do
-            git show $COMMON_COMMIT:$file > ${REVIEW_DIRNAME}/orig/`basename $file`
+            touch ${REVIEW_DIRNAME}/orig/`basename $file`
+            git show $COMMON_COMMIT:$file > ${REVIEW_DIRNAME}/orig/`basename $file` || true
         done
     fi
     LATEST_COMMIT_DATE=$(git log -n1 --format=format:%ai $SOURCE_BRANCH_NAME)
@@ -67,7 +68,8 @@ case $COMMAND in
         ln -s "${CURRENT_FOLDER}" "${LATEST_DIR}"
         for file in $CHANGED_FILES
         do
-            git show "$SOURCE_BRANCH_NAME:$file" > "$CURRENT_FOLDER/`basename $file`"
+            touch "$CURRENT_FOLDER/`basename $file`"
+            git show "$SOURCE_BRANCH_NAME:$file" > "$CURRENT_FOLDER/`basename $file`" || true
         done
     fi
 

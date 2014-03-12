@@ -2,8 +2,8 @@
 
 show_help() {
     echo "Usage: git review prepare"
-    echo "                  list"
-    echo "                  select"
+    echo "                  cf"
+    echo "                  sr"
     echo
     echo "Prepare"
     echo "======="
@@ -12,6 +12,14 @@ show_help() {
     echo
     echo "Running this command causes switching to the prepared codereview"
     echo "(see help for `select` section)."
+    echo
+    echo "CF"
+    echo "=="
+    echo "Get list of filed changed by the selected patchset."
+    echo
+    echo "SR"
+    echo "=="
+    echo "Start review. Use \`git review sr FILENAME\` to start review process"
 }
 
 #

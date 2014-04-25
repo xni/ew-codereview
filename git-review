@@ -20,6 +20,14 @@ show_help() {
     echo "SR"
     echo "=="
     echo "Start review. Use \`git review sr FILENAME\` to start review process"
+    echo
+    echo "VL"
+    echo "=="
+    echo "View latest. Use \`git review vl FILENAME\` to view latest file version"
+    echo
+    echo "ACCEPT"
+    echo "======"
+    echo "Ignore changes in file. Use \`git review accept FILENAME\`"
 }
 
 #
@@ -100,6 +108,19 @@ case $COMMAND in
     cd $REVIEW_DIRNAME
     vimdiff orig/$filename latest/$filename
     cd -
+    ;;
+  vl)
+    # view latest
+    filename=$2
+    REVIEW_DIRNAME=`git config --local --get $GIT_CONFIG_SELECTED_PATCH_PROPERTY`
+    cd $REVIEW_DIRNAME/latest
+    vim $filename
+    cd -
+    ;;
+  accept)
+    filename=$2
+    REVIEW_DIRNAME=`git config --local --get $GIT_CONFIG_SELECTED_PATCH_PROPERTY`
+    find "${REVIEW_DIRNAME}" -name "$filename" -delete
     ;;
   *)
     show_help
